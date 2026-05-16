@@ -1,52 +1,30 @@
-<<<<<<< HEAD
-# Defect Detection PCB using YOLO
+# PCB Defect Detection
 
-This repository contains code for PCB defect detection using YOLO-based models.
+## Project Overview
+This project focuses on the automated detection and localization of defects in Printed Circuit Boards (PCBs) utilizing deep learning techniques. By leveraging state-of-the-art object detection and anomaly detection models, this system aims to enhance quality assurance processes in hardware manufacturing.
 
-## Overview
-- Project: Defect Detection for PCB images using a YOLO implementation.
+## Dataset
+This project utilizes the **Deep Surface PCB Defect Dataset**.
+* **Source:** [Roboflow Universe - PCB-EGRLA DSPCBSD](https://universe.roboflow.com/pcb-egrla/dspcbsd)
+* **Description:** A comprehensive dataset containing annotated images of various deep surface defects found on printed circuit boards.
 
-## Quick setup
-1. Create (already done) and activate the virtual environment:
-   - PowerShell: `.\.venv\Scripts\Activate.ps1`
-   - Command Prompt: `.\.venv\Scripts\activate.bat`
-   - Git Bash / WSL: `source .venv/bin/activate`
-2. Install dependencies:
+## Quest Roadmap (Tasks)
+- [ ] **Data Preprocessing:** Clean, augment, and format the dataset for optimal model ingestion.
+- [ ] **YOLOv11 Training:** Train the YOLOv11 object detection architecture to identify and bound localized defects.
+- [ ] **Performance Evaluation:** Measure model accuracy and robustness using standard computer vision metrics.
+- [ ] **Visualization:** Generate clear visual outputs of bounding boxes and confidence scores on test data.
+- [ ] **Anomaly Detection Comparison:** Implement and compare YOLOv11's performance against standard anomaly detection techniques:
+  - [ ] Autoencoders
+  - [ ] PatchCore
 
-```powershell
-pip install -r requirements.txt
-```
+## Evaluation Metrics
+The models will be benchmarked against the following key performance indicators:
+* **mAP@0.5:** Mean Average Precision at an Intersection over Union (IoU) threshold of 0.5.
+* **Precision:** The ratio of correctly predicted positive observations to the total predicted positives.
+* **Recall:** The ratio of correctly predicted positive observations to all observations in actual class.
 
-3. Prepare your dataset and configuration (place dataset in a `data/` folder or update training scripts accordingly).
+## Setup & Installation
+*(Instructions for environment setup, dependencies, and cloning the repository will be added here as the project progresses.)*
 
 ## Usage
-- Training / inference commands depend on the YOLO implementation in this repo. Typical commands:
-
-```powershell
-# train
-python train.py --config config.yaml
-
-# inference
-python detect.py --weights runs/exp/weights/best.pt --source data/images
-```
-
-Replace the scripts and arguments above with the actual entry points in this repo.
-
-## Git / GitHub
-- Add `.venv/` to `.gitignore` to avoid committing the virtual environment.
-- To commit and push this README locally:
-
-```powershell
-git add README.md
-git commit -m "Add README"
-git remote add origin https://github.com/Yasmin-Alhendawy/Defect-Detection-PCB-using-YOLO11.git
-git push -u origin main
-```
-
-If your default branch is `master` or another name, replace `main` accordingly. For SSH remotes use the SSH URL instead of HTTPS.
-
-## Notes
-- If you want, I can commit and push this README for you — tell me whether you prefer SSH or HTTPS+PAT, or provide credentials.
-=======
-# Defect-Detection-PCB-using-YOLO11
->>>>>>> 73104baae3bb06dae3192adee980e0a7040db2d3
+*(Commands for running inference, training scripts, and evaluation pipelines will be documented here.)*
