@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Defect Detection PCB using YOLO
 
 This repository contains code for PCB defect detection using YOLO-based models.
@@ -46,3 +47,6 @@ If your default branch is `master` or another name, replace `main` accordingly. 
 
 ## Notes
 - If you want, I can commit and push this README for you — tell me whether you prefer SSH or HTTPS+PAT, or provide credentials.
+=======
+# Defect-Detection-PCB-using-YOLO11
+>>>>>>> 73104baae3bb06dae3192adee980e0a7040db2d3
