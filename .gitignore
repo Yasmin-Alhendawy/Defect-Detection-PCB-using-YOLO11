@@ -1,6 +1,17 @@
+<<<<<<< HEAD
 ﻿.venv/
 DSPCBSD+-1/
 runs/
 *.pt
 __pycache__/
 *.cache
+=======
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+env/
+venv/
+/.vscode/
+>>>>>>> 6eb3fba7cbda7d48326d15749f96ca2f86b235f8
