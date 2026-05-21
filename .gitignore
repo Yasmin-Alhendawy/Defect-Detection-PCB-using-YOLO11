@@ -1,0 +1,6 @@
+﻿.venv/
+DSPCBSD+-1/
+runs/
+*.pt
+__pycache__/
+*.cache
