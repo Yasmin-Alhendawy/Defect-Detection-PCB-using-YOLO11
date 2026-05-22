@@ -1,0 +1,22 @@
+# Virtual environments
+yoloenv/
+.venv/
+
+# Dataset folders
+DSPCBSD+-1/
+DSPCBSD-1/
+
+
+# Model weights
+*.pt
+*.onnx
+*.engine
+*.torchscript
+
+# Cache files
+*.cache
+__pycache__/
+*.pyc
+
+# Secrets
+.env
