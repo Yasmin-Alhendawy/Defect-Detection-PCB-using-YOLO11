@@ -42,7 +42,8 @@ class PCBDatasetWithAugmentation(YOLODataset):
                 A.ElasticTransform(alpha=120, sigma=120 * 0.05, p=0.3),
                 # [A4] CoarseDropout — forces model to detect from partial observations
                 # Use a conservative CoarseDropout signature to avoid compatibility issues
-                A.CoarseDropout(max_holes=8, max_height=32, max_width=32, p=0.3),
+                # Use default CoarseDropout parameters to avoid API mismatches
+                A.CoarseDropout(p=0.3),
             ],
             bbox_params=A.BboxParams(
                 format="yolo",
