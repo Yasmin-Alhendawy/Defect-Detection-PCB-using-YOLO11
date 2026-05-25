@@ -15,71 +15,85 @@ import random
 import cv2
 import numpy as np
 from pathlib import Path
-from collections import defaultdict
+from collections import defaultdict 
 
 import albumentations as A
 from ultralytics import YOLO
 from ultralytics.data.dataset import YOLODataset
 from ultralytics.utils import LOGGER
 
+
 # =============================================================================
 # [A] CUSTOM ALBUMENTATIONS PIPELINE
-# Subclass YOLODataset and override build_transforms() to inject our pipeline.
-# bbox_params ensures bounding boxes are updated after every spatial transform.
+# AlbuWrapper and the dataset class are defined at MODULE TOP LEVEL so that
+# Windows multiprocessing workers can pickle them correctly.
+# bbox_params keeps bounding boxes synced with every spatial transform.
 # =============================================================================
 
+# [A1] Build the Albumentations pipeline once at module level.
+ALBU_TRANSFORM = A.Compose(
+    [
+        # Random 90-degree rotation — handles PCB orientation variance
+        A.RandomRotate90(p=0.5),
+        # CLAHE — enhances local contrast to highlight subtle defects
+        A.CLAHE(clip_limit=4.0, tile_grid_size=(8, 8), p=0.5),
+        # ElasticTransform — simulates physical PCB surface deformation
+        A.ElasticTransform(alpha=120, sigma=120 * 0.05, p=0.3),
+        # CoarseDropout — forces detection from partial observations
+        # NOTE: Albumentations 2.0.8 uses range tuples, not min/max args.
+        A.CoarseDropout(
+            num_holes_range=(1, 8),
+            hole_height_range=(8, 32),
+            hole_width_range=(8, 32),
+            fill=0,
+            p=0.3,
+        ),
+    ],
+    bbox_params=A.BboxParams(
+        format="yolo",
+        label_fields=["class_labels"],
+        min_visibility=0.3,
+    ),
+)
+
+
+class AlbuWrapper:
+    """
+    [A] Top-level wrapper so Windows multiprocessing can pickle it.
+    Applies the Albumentations pipeline, then the default Ultralytics
+    transforms (letterbox, normalisation, etc.).
+    """
+    def __init__(self, parent):
+        self.parent = parent
+
+    def __call__(self, labels):
+        img = labels["img"]
+        bboxes = labels.get("bboxes", np.zeros((0, 4)))
+        classes = labels.get("cls", np.zeros((0,)))
+        bbox_list = bboxes.tolist() if len(bboxes) else []
+        class_list = classes.tolist() if len(classes) else []
+        try:
+            transformed = ALBU_TRANSFORM(
+                image=img,
+                bboxes=bbox_list,
+                class_labels=class_list,
+            )
+            labels["img"] = transformed["image"]
+            if len(transformed["bboxes"]) > 0:
+                labels["bboxes"] = np.array(transformed["bboxes"], dtype=np.float32)
+                labels["cls"] = np.array(transformed["class_labels"], dtype=np.float32)
+        except Exception as e:
+            LOGGER.warning(f"Albumentations transform failed: {e}")
+        return self.parent(labels)
+
+
 class PCBDatasetWithAugmentation(YOLODataset):
-    """Custom dataset that injects Albumentations for Experiment 1."""
+    """[A] Custom dataset that injects Albumentations for Experiment 1."""
 
     def build_transforms(self, hyp=None):
-        albu_transform = A.Compose(
-            [
-                # [A1] Random 90-degree rotation — handles PCB orientation variance
-                A.RandomRotate90(p=0.5),
-                # [A2] CLAHE — enhances local contrast to highlight subtle defects
-                A.CLAHE(clip_limit=4.0, tile_grid_size=(8, 8), p=0.5),
-                # [A3] ElasticTransform — simulates physical PCB surface deformation
-                A.ElasticTransform(alpha=120, sigma=120 * 0.05, p=0.3),
-                # [A4] CoarseDropout — forces model to detect from partial observations
-                # Use a conservative CoarseDropout signature to avoid compatibility issues
-                # Use default CoarseDropout parameters to avoid API mismatches
-                A.CoarseDropout(p=0.3),
-            ],
-            bbox_params=A.BboxParams(
-                format="yolo",
-                label_fields=["class_labels"],
-                min_visibility=0.3,
-            ),
-        )
-
+        # Build default Ultralytics transforms, then wrap with Albumentations.
         parent_transforms = super().build_transforms(hyp)
-
-        class AlbuWrapper:
-            def __init__(self, albu, parent):
-                self.albu = albu
-                self.parent = parent
-
-            def __call__(self, labels):
-                img = labels["img"]
-                bboxes = labels.get("bboxes", np.zeros((0, 4)))
-                classes = labels.get("cls", np.zeros((0,)))
-                bbox_list = bboxes.tolist() if len(bboxes) else []
-                class_list = classes.tolist() if len(classes) else []
-                try:
-                    transformed = self.albu(
-                        image=img,
-                        bboxes=bbox_list,
-                        class_labels=class_list,
-                    )
-                    labels["img"] = transformed["image"]
-                    if len(transformed["bboxes"]) > 0:
-                        labels["bboxes"] = np.array(transformed["bboxes"], dtype=np.float32)
-                        labels["cls"] = np.array(transformed["class_labels"], dtype=np.float32)
-                except Exception as e:
-                    LOGGER.warning(f"Albumentations transform failed: {e}")
-                return self.parent(labels)
-
-        return AlbuWrapper(albu_transform, parent_transforms)
+        return AlbuWrapper(parent_transforms)
 
 
 # =============================================================================
@@ -200,6 +214,43 @@ def run_copy_paste_augmentation(
 
 
 # =============================================================================
+# [A] Monkey-patch DetectionTrainer — defined at top level for pickling safety.
+# =============================================================================
+
+from ultralytics.models.yolo.detect.train import DetectionTrainer
+
+_original_build_dataset = DetectionTrainer.build_dataset
+
+
+def custom_build_dataset(self, img_path, mode="train", batch=None):
+    """[A] Use PCBDatasetWithAugmentation for the train split only."""
+    gs = max(int(self.model.stride.max() if self.model else 0), 32)
+    if mode == "train":
+        return PCBDatasetWithAugmentation(
+            img_path=img_path,
+            imgsz=self.args.imgsz,
+            batch_size=batch,
+            augment=True,
+            hyp=self.args,
+            rect=False,
+            cache=self.args.cache or False,
+            single_cls=self.args.single_cls or False,
+            stride=int(gs),
+            pad=0.0,
+            prefix="train: ",
+            task="detect",
+            classes=self.args.classes,
+            data=self.data,
+            fraction=self.args.fraction,
+        )
+    else:
+        return _original_build_dataset(self, img_path, mode, batch)
+
+
+DetectionTrainer.build_dataset = custom_build_dataset
+
+
+# =============================================================================
 # MAIN
 # =============================================================================
 
@@ -217,37 +268,6 @@ if __name__ == "__main__":
     )
     print(f"[B] {n} synthetic images added.\n")
 
-    # [A] Monkey-patch DetectionTrainer to use our custom dataset class
-    from ultralytics.models.yolo.detect.train import DetectionTrainer
-
-    original_build_dataset = DetectionTrainer.build_dataset
-
-    def custom_build_dataset(self, img_path, mode="train", batch=None):
-        """[A] Use PCBDatasetWithAugmentation for train split only."""
-        gs = max(int(self.model.stride.max() if self.model else 0), 32)
-        if mode == "train":
-            return PCBDatasetWithAugmentation(
-                img_path=img_path,
-                imgsz=self.args.imgsz,
-                batch_size=batch,
-                augment=True,
-                hyp=self.args,
-                rect=False,
-                cache=self.args.cache or False,
-                single_cls=self.args.single_cls or False,
-                stride=int(gs),
-                pad=0.0,
-                prefix="train: ",
-                task="detect",          # fixed: hardcoded instead of self.task
-                classes=self.args.classes,
-                data=self.data,
-                fraction=self.args.fraction,
-            )
-        else:
-            return original_build_dataset(self, img_path, mode, batch)
-
-    DetectionTrainer.build_dataset = custom_build_dataset
-
     # [A] + [C] Train
     print("=" * 60)
     print("Experiment 1 — Step 2: Training")
@@ -264,12 +284,16 @@ if __name__ == "__main__":
         device=0,
         patience=10,
         workers=4,
-        project="pcb_runs",              # fixed: no double path
+        project="pcb_runs",
         name="exp1_augmentation",
-        # [C] cls_pw upweights classification loss for imbalanced classes
-        # replaces fl_gamma which is unsupported in Ultralytics 8.4.52
-        cls_pw=2.0,
-        erasing=0.0,                     # disable default erasing (we use CoarseDropout)
+        # [C] Class imbalance handling.
+        # NOTE: In Ultralytics 8.4.52, cls_pw must be in range [0, 1] and
+        # fl_gamma is unsupported. We instead raise the classification loss
+        # gain (cls) above its default of 0.5 so misclassified and minority
+        # defect instances contribute more to the total loss. This is the
+        # closest native lever for class-imbalance emphasis in this version.
+        cls=1.0,          # classification loss gain (default 0.5)
+        erasing=0.0,      # disable default erasing (we use CoarseDropout)
     )
 
     print("\n" + "=" * 60)
