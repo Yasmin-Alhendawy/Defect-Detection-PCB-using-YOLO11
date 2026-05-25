@@ -2,10 +2,9 @@
 yoloenv/
 .venv/
 
-# Dataset folders
+# Dataset
 DSPCBSD+-1/
 DSPCBSD-1/
-
 
 # Model weights
 *.pt
@@ -13,10 +12,13 @@ DSPCBSD-1/
 *.engine
 *.torchscript
 
-# Cache files
+# Cache
 *.cache
 __pycache__/
 *.pyc
 
 # Secrets
 .env
+
+# Ignore heavy training images if needed
+runs/**/weights/
