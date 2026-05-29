@@ -84,11 +84,14 @@ def collect_predictions(split="val"):
         cfg = yaml.safe_load(f)
 
     # Resolve image directory
+    # Roboflow data.yaml uses paths like "../valid/images" even though
+    # valid/ sits INSIDE the dataset folder — strip the leading "../"
     data_root = Path(DATA).parent
-    img_dir = (data_root / cfg[split]).resolve()
+    rel = cfg[split].lstrip("./\\").replace("../", "")   # "valid/images"
+    img_dir = (data_root / rel).resolve()
 
     img_paths = sorted(img_dir.glob("*.jpg"))
-    lbl_dir   = img_dir.parent.parent / split / "labels"
+    lbl_dir = img_dir.parent / "labels"   # sibling of images/
 
     preds = {}
     gts   = {}
@@ -111,9 +114,9 @@ def collect_predictions(split="val"):
         # Predictions
         p_list = []
         if boxes is not None and len(boxes):
-            xyxy  = boxes.xyxy.cpu().numpy()   # (N,4)
-            confs = boxes.conf.cpu().numpy()   # (N,)
-            clss  = boxes.cls.cpu().numpy().astype(int)  # (N,)
+            xyxy  = boxes.xyxy.cpu().numpy()   # type: ignore # (N,4)
+            confs = boxes.conf.cpu().numpy()   # type: ignore # (N,)
+            clss  = boxes.cls.cpu().numpy().astype(int)  # type: ignore # (N,)
             for i in range(len(clss)):
                 p_list.append((clss[i], float(confs[i]),
                                *xyxy[i].tolist()))
