@@ -67,11 +67,11 @@ if __name__ == "__main__":
  # ── Step 1: Load both models ─────────────────────────────────────────────
  print("Loading standard yolo11s.pt ...")
  std_model  = YOLO(str(WEIGHTS))
- std_sd     = std_model.model.state_dict()
+ std_sd     = std_model.model.state_dict() # type: ignore
 
  print("Building CBAM model from yaml ...")
  cbam_model = YOLO(str(YAML))
- cbam_sd    = cbam_model.model.state_dict()
+ cbam_sd    = cbam_model.model.state_dict() # type: ignore
 
  # ── Step 2: Build remapped state dict ───────────────────────────────────
  print("\nTransferring backbone weights ...")
@@ -102,7 +102,7 @@ if __name__ == "__main__":
      new_sd[cbam_key] = std_val.clone()
      transferred += 1
 
- cbam_model.model.load_state_dict(new_sd, strict=False)
+ cbam_model.model.load_state_dict(new_sd, strict=False) # type: ignore
  print(f"  Transferred : {transferred} tensors")
  print(f"  Skipped     : {skipped} tensors (shape mismatch or head layer)")
  print(f"  CBAM-only   : {len(cbam_sd) - transferred - skipped} tensors (randomly initialised)")
