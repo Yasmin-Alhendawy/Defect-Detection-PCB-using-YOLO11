@@ -1,0 +1,2 @@
+weights,slice_size,overlap,iou_match,used_tuned_thresh,base_P,base_R,base_F1,sahi_P,sahi_R,sahi_F1,gain_P,gain_R,gain_F1
+best.pt,320,0.2,0.5,True,0.8257,0.7585,0.7907,0.8317,0.7408,0.7836,0.006,-0.0176,-0.007

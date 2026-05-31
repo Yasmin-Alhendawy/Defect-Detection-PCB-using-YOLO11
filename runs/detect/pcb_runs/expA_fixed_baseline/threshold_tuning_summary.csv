@@ -1,0 +1,2 @@
+weights,iou_match,val_default_P,val_default_R,val_default_F1,val_tuned_P,val_tuned_R,val_tuned_F1,test_default_P,test_default_R,test_default_F1,test_tuned_P,test_tuned_R,test_tuned_F1,optimal_thresholds
+best.pt,0.5,0.7615,0.8119,0.7859,0.8211,0.7744,0.7971,0.7739,0.7917,0.7827,0.8257,0.7585,0.7907,"{""0"": 0.45, ""1"": 0.35, ""2"": 0.5, ""3"": 0.35, ""4"": 0.35, ""5"": 0.7, ""6"": 0.3, ""7"": 0.25, ""8"": 0.4}"

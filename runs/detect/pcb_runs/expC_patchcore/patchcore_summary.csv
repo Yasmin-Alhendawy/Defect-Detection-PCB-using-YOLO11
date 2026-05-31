@@ -1,0 +1,2 @@
+method,memory_bank_patches,coreset_ratio,knn_k,score_threshold,iou_threshold,n_test_images,precision,recall,f1,image_detection_rate,TP_total,FP_total,FN_total
+PatchCore-ResNet18,208700,0.05,5,0.5,0.1,759,0.1424,0.0828,0.1047,0.1555,122,735,1352
