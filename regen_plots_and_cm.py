@@ -22,9 +22,9 @@ import pandas as pd
 # CONFIG  ← edit these 3 lines for each experiment
 # ══════════════════════════════════════════════════════════════════════════════
 
-EXP_FOLDER = Path(r"C:\Users\Yasmi\OneDrive\Desktop\UNI\This semester\[Projects]\Machine II\[Presentation_Preperation]\Experiments to Present\1.Baseline 50\1.Baseline_50")
-EXP_NAME   = "Baseline_50"          # used as prefix in all output filenames
-OUT_DIR    = Path(r"C:\Users\Yasmi\OneDrive\Desktop\UNI\This semester\[Projects]\Machine II\[Presentation_Preperation]\Experiments to Present\1.Baseline 50\1.Baseline_50\Update")
+EXP_FOLDER = Path(r"C:\Users\Yasmi\OneDrive\Desktop\UNI\This semester\[Projects]\Machine II\[Presentation_Preperation]\Experiments to Present\1.Baseline_50\2.Baseline_50+Advanced_Augmentation")
+EXP_NAME   = "Baseline_50+Advanced_Augmentation"          # used as prefix in all output filenames
+OUT_DIR    = Path(r"C:\Users\Yasmi\OneDrive\Desktop\UNI\This semester\[Projects]\Machine II\[Presentation_Preperation]\Experiments to Present\1.Baseline_50\2.Baseline_50+Advanced_Augmentation")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # FIXED — do not change
@@ -172,7 +172,19 @@ def _draw_cm(matrix, labels, normalize, title, out_path):
     print(f"✓ {out_path.name}")
 
 
-def regen_confusion_matrix():
+CURVE_FILES = [
+    "BoxR_curve.png",
+    "BoxPR_curve.png",
+    "BoxP_curve.png",
+    "BoxF1_curve.png",
+]
+
+
+def _run_val(do_cm=True, do_curves=True):
+    """
+    Run model.val() once and save curve PNGs and/or confusion matrices to OUT_DIR.
+    Avoids running validation twice when both --cm and --curves are requested.
+    """
     from ultralytics import YOLO
 
     weights = EXP_FOLDER / "weights" / "best.pt"
@@ -180,8 +192,6 @@ def regen_confusion_matrix():
         print(f"[SKIP] no weights/best.pt found in {EXP_FOLDER}")
         return
 
-    # Use a callback to capture the validator while it's still alive.
-    # on_val_end fires with `validator` as its argument (Ultralytics convention).
     captured = {}
 
     def on_val_end(validator):
@@ -191,8 +201,18 @@ def regen_confusion_matrix():
     patched_yaml = _patch_yaml()
 
     try:
+        # Register CoordAtt (and CBAM) into ultralytics.nn.modules.block so
+        # pickle can find them when loading checkpoints trained with those modules.
+        import sys, importlib
+        sys.path.insert(0, str(Path(__file__).parent / "experiments"))
+        _pca = importlib.import_module("per_class_analysis")
+        _pca._register_custom_modules()
+
         val_tmp = OUT_DIR / "_val_tmp"
         model = YOLO(str(weights))
+        # Overwrite the checkpoint's class names so curve plots use our labels
+        name_map = {i: name for i, name in enumerate(CLASS_LABELS)}
+        model.model.names = name_map # type: ignore
         model.add_callback("on_val_end", on_val_end)
         model.val(
             data     = str(patched_yaml),
@@ -200,38 +220,62 @@ def regen_confusion_matrix():
             batch    = 6,
             device   = "0",
             amp      = True,
-            plots    = True,     # MUST be True — YOLO only builds CM when plots=True
+            plots    = True,     # MUST be True — YOLO builds CM + curve plots only when True
             save_dir = str(val_tmp),
             name     = EXP_NAME,
             verbose  = False,
         )
-        # delete YOLO's own plot files (we draw ours below)
+
+        # ── Curve plots ───────────────────────────────────────────────────────
+        if do_curves:
+            # When save_dir is explicit, YOLO writes directly there (not save_dir/name)
+            yolo_out = val_tmp
+            for fname in CURVE_FILES:
+                src = yolo_out / fname
+                if src.exists():
+                    dst = OUT_DIR / f"{EXP_NAME}_{fname}"
+                    shutil.copy2(src, dst)
+                    print(f"✓ {dst.name}")
+                else:
+                    print(f"[WARN] {fname} not found in YOLO output — skipping")
+
+        # Done with YOLO's temp dir
         shutil.rmtree(val_tmp, ignore_errors=True)
 
-        if "matrix" not in captured:
-            print("[ERROR] confusion matrix not captured — check Ultralytics version")
-            return
+        # ── Confusion matrices ────────────────────────────────────────────────
+        if do_cm:
+            if "matrix" not in captured:
+                print("[ERROR] confusion matrix not captured — check Ultralytics version")
+                return
 
-        cm_raw = captured["matrix"]          # shape (nc+1, nc+1) = (10, 10)
-        labels = CLASS_LABELS + ["background"]
+            cm_raw = captured["matrix"]          # shape (nc+1, nc+1) = (10, 10)
+            labels = CLASS_LABELS + ["background"]
 
-        # Raw counts
-        _draw_cm(cm_raw, labels, normalize=False,
-                 title="Confusion Matrix",
-                 out_path=OUT_DIR / f"{EXP_NAME}_confusion_matrix.png")
+            # Raw counts
+            _draw_cm(cm_raw, labels, normalize=False,
+                     title="Confusion Matrix",
+                     out_path=OUT_DIR / f"{EXP_NAME}_confusion_matrix.png")
 
-        # Normalised column-wise (same as YOLO)
-        cm_norm = cm_raw.astype(float)
-        col_sums = cm_norm.sum(axis=0)
-        col_sums[col_sums == 0] = 1
-        cm_norm /= col_sums
-        _draw_cm(cm_norm, labels, normalize=True,
-                 title="Confusion Matrix Normalized",
-                 out_path=OUT_DIR / f"{EXP_NAME}_confusion_matrix_normalized.png")
+            # Normalised column-wise (same as YOLO)
+            cm_norm = cm_raw.astype(float)
+            col_sums = cm_norm.sum(axis=0)
+            col_sums[col_sums == 0] = 1
+            cm_norm /= col_sums
+            _draw_cm(cm_norm, labels, normalize=True,
+                     title="Confusion Matrix Normalized",
+                     out_path=OUT_DIR / f"{EXP_NAME}_confusion_matrix_normalized.png")
 
     finally:
         patched_yaml.unlink(missing_ok=True)
         shutil.rmtree(OUT_DIR / "_val_tmp", ignore_errors=True)
+
+
+def regen_confusion_matrix():
+    _run_val(do_cm=True, do_curves=False)
+
+
+def regen_curve_plots():
+    _run_val(do_cm=False, do_curves=True)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -240,11 +284,12 @@ def regen_confusion_matrix():
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--plots", action="store_true", help="Regenerate training curve plots")
-    parser.add_argument("--cm",    action="store_true", help="Regenerate confusion matrices (GPU)")
+    parser.add_argument("--plots",  action="store_true", help="Regenerate training curve plots (no GPU)")
+    parser.add_argument("--cm",     action="store_true", help="Regenerate confusion matrices (GPU)")
+    parser.add_argument("--curves", action="store_true", help="Regenerate BoxR/P/PR/F1 curve plots (GPU)")
     args = parser.parse_args()
 
-    if not args.plots and not args.cm:
+    if not args.plots and not args.cm and not args.curves:
         parser.print_help()
         return
 
@@ -256,8 +301,9 @@ def main():
     if args.plots:
         plot_training_curves()
 
-    if args.cm:
-        regen_confusion_matrix()
+    # --cm and --curves share one val run if both are requested
+    if args.cm or args.curves:
+        _run_val(do_cm=args.cm, do_curves=args.curves)
 
     print("\nDone.")
 

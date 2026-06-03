@@ -1,83 +1,56 @@
 ============================================================================
-  PER-CLASS ANALYSIS REPORT — Exp0 | ExpA | ExpB (CBAM)
+  PER-CLASS ANALYSIS REPORT — Experiments to Present
 ============================================================================
 
-── OVERALL METRICS (ExpA vs CBAM) ───────────────────────────────────
-Metric                      ExpA      CBAM   Δ CBAM−ExpA
-----------------------------------------------------------
-  mAP@0.5                 0.8373    0.8166       -0.0207
-  mAP@0.5:0.95            0.4939    0.4558       -0.0381
-  Precision               0.8242    0.7972       -0.0270
-  Recall                  0.7726    0.7619       -0.0107
+── OVERALL METRICS ──────────────────────────────────────────────────
+Experiment                     mAP@0.5   mAP@0.5:0.95         P         R
+--------------------------------------------------------------------------
+  1.1 Baseline 50ep             0.8411         0.4972    0.8092    0.7942
+  1.2 Baseline 50ep+Aug         0.8356         0.4881    0.7924    0.7934
+  2.1 Baseline 100ep            0.8373         0.4939    0.8242    0.7726
+  2.2 Baseline +Oversample      0.8112         0.4579    0.8104    0.7678
+  3. CA (CoordAtt)              0.8166         0.4558    0.7972    0.7619
+  4. CBAM                       0.7758         0.4291    0.7453    0.7011
+  5. P2                         0.7528         0.4088    0.7411    0.7710
 
 ── PER-CLASS AP@0.5 TABLE ───────────────────────────────────────────
-Class               Diff       Exp0     ExpA     CBAM   Δ ExpA−Exp0   Δ CBAM−ExpA
-----------------------------------------------------------------------------------
-  Short             medium   0.9144   0.9142   0.8672       -0.0002       -0.0470
-  Spur              medium   0.8341   0.8240   0.8221       -0.0102       -0.0019
-  Spurious Copper   medium   0.7912   0.8028   0.7908       +0.0116       -0.0121
-  Open              medium   0.8916   0.9111   0.8658       +0.0195       -0.0453
-  Mouse Bite        medium   0.8243   0.7936   0.7769       -0.0308       -0.0167
-  Hole Breakout     easy     0.9846   0.9856   0.9820       +0.0009       -0.0036
-  Conductor Scratch  hard     0.7390   0.7183   0.6825       -0.0207       -0.0358
-  Conductor FOI     hard     0.7109   0.7177   0.7012       +0.0068       -0.0166
-  Base Material FOI  hard     0.8793   0.8682   0.8611       -0.0111       -0.0071
+Class               Diff    1.1 Baseline   1.2 Baseline   2.1 Baseline   2.2 Baseline   3. CA (CoordA        4. CBAM          5. P2
+-----------------------------------------------------------------------------------------------------------------------------------
+  Short             medium         0.9144         0.8998         0.9142         0.8883         0.8672         0.7625         0.7303
+  Spur              medium         0.8341         0.8471         0.8240         0.8146         0.8221         0.8005         0.7952
+  Spurious Copper   medium         0.7912         0.8197         0.8028         0.7456         0.7908         0.7221         0.6615
+  Open              medium         0.8916         0.9032         0.9111         0.8755         0.8658         0.8231         0.8576
+  Mouse Bite        medium         0.8243         0.7899         0.7936         0.7621         0.7769         0.7630         0.7634
+  Hole Breakout     easy           0.9846         0.9745         0.9856         0.9824         0.9820         0.9772         0.9725
+  Conductor Scratch  hard           0.7390         0.7443         0.7183         0.7024         0.6825         0.6940         0.6348
+  Conductor FOI     hard           0.7109         0.6542         0.7177         0.6917         0.7012         0.6142         0.6003
+  Base Material FOI  hard           0.8793         0.8876         0.8682         0.8387         0.8611         0.8256         0.7601
 
-── CBAM vs ExpA — WINNERS (Δ > +0.5 pp) ────────────────────────────
-  None — CBAM did not improve any class by more than 0.5 pp.
+── DELTA vs BASELINE (AP@0.5) ───────────────────────────────────────
+  1.2 Baseline 50ep+Aug: 5 improved, 4 degraded vs baseline
+    Best gain : Spurious Copper (+0.0284)
+    Worst loss: Conductor FOI (-0.0568)
+  2.1 Baseline 100ep: 3 improved, 4 degraded vs baseline
+    Best gain : Open (+0.0195)
+    Worst loss: Mouse Bite (-0.0308)
+  2.2 Baseline +Oversample: 0 improved, 8 degraded vs baseline
+    Best gain : Hole Breakout (-0.0022)
+    Worst loss: Mouse Bite (-0.0623)
+  3. CA (CoordAtt): 0 improved, 7 degraded vs baseline
+    Best gain : Spurious Copper (-0.0005)
+    Worst loss: Conductor Scratch (-0.0566)
+  4. CBAM: 0 improved, 9 degraded vs baseline
+    Best gain : Hole Breakout (-0.0074)
+    Worst loss: Short (-0.1519)
+  5. P2: 0 improved, 9 degraded vs baseline
+    Best gain : Hole Breakout (-0.0121)
+    Worst loss: Short (-0.1841)
 
-── CBAM vs ExpA — LOSERS (Δ < −0.5 pp) ────────────────────────────
-    SH (Short                 )  Δ=-0.0470  [0.9142 → 0.8672]  difficulty=medium
-    OP (Open                  )  Δ=-0.0453  [0.9111 → 0.8658]  difficulty=medium
-    CS (Conductor Scratch     )  Δ=-0.0358  [0.7183 → 0.6825]  difficulty=hard
-    MB (Mouse Bite            )  Δ=-0.0167  [0.7936 → 0.7769]  difficulty=medium
-   CFO (Conductor FOI         )  Δ=-0.0166  [0.7177 → 0.7012]  difficulty=hard
-    SC (Spurious Copper       )  Δ=-0.0121  [0.8028 → 0.7908]  difficulty=medium
-  BMFO (Base Material FOI     )  Δ=-0.0071  [0.8682 → 0.8611]  difficulty=hard
-
-── CBAM vs ExpA — STABLE (|Δ| ≤ 0.5 pp) ───────────────────────────
-    SP (Spur                  )  Δ=-0.0019  ExpA AP50=0.8240
-    HB (Hole Breakout         )  Δ=-0.0036  ExpA AP50=0.9856
-
-── EXTRA TRAINING EFFECT (ExpA − Exp0, +50 epochs) ─────────────────
-Class                 Δ AP50   Δ AP50-95
-------------------------------------------
-  Open               +0.0195     +0.0163
-  Spurious Copper    +0.0116     +0.0147
-  Conductor FOI      +0.0068     +0.0084
-  Hole Breakout      +0.0009     -0.0017
-  Short              -0.0002     -0.0235
-  Spur               -0.0102     -0.0120
-  Base Material FOI   -0.0111     -0.0081
-  Conductor Scratch   -0.0207     -0.0050
-  Mouse Bite         -0.0308     -0.0181
-
-── MEAN DELTA BY DIFFICULTY GROUP ───────────────────────────────────
-Group     Classes                          Δ ExpA−Exp0   Δ CBAM−ExpA
---------------------------------------------------------------------
-  Easy    HB                                   +0.0009       -0.0036
-  Medium  SH, SP, SC, OP, MB                   -0.0020       -0.0246
-  Hard    CS, CFO, BMFO                        -0.0083       -0.0198
-
-── PRECISION / RECALL / F1 SHIFT (CBAM − ExpA) ─────────────────────
-Class                Δ Precision    Δ Recall      Δ F1
---------------------------------------------------------
-  Short                  -0.0540     -0.0350   -0.0446
-  Spur                   -0.0280     +0.0200   -0.0012
-  Spurious Copper        +0.0700     -0.0440   +0.0126
-  Open                   -0.1080     -0.0060   -0.0587
-  Mouse Bite             -0.0580     +0.0130   -0.0167
-  Hole Breakout          +0.0050     -0.0110   -0.0027
-  Conductor Scratch       +0.0040     -0.0680   -0.0395
-  Conductor FOI          -0.0540     +0.0030   -0.0197
-  Base Material FOI       -0.0200     +0.0310   +0.0044
-
-── INTERPRETATION (for paper) ───────────────────────────────────────
-  CBAM (CoordAtt) changed overall mAP@0.5 vs ExpA by -0.0207.
-  Class-level: 0 improved, 7 degraded, 2 stable (threshold ±0.5 pp).
-  Easy (HB): mean CBAM Δ = -0.0036
-  Medium (SH/SP/SC/OP/MB): mean CBAM Δ = -0.0246
-  Hard (CS/CFO/BMFO): mean CBAM Δ = -0.0198
-  Hard classes total gain vs Exp0: -0.0282 (training + attention combined).
+── MEAN AP@0.5 BY DIFFICULTY GROUP ─────────────────────────────────
+Group     Classes                         1.1 Baseli  1.2 Baseli  2.1 Baseli  2.2 Baseli  3. CA (Coo     4. CBAM       5. P2
+----------------------------------------------------------------------------------------------------------------------------
+  Easy    HB                                  0.9846      0.9745      0.9856      0.9824      0.9820      0.9772      0.9725
+  Medium  SH, SP, SC, OP, MB                  0.8511      0.8519      0.8491      0.8172      0.8245      0.7742      0.7616
+  Hard    CS, CFO, BMFO                       0.7764      0.7620      0.7681      0.7442      0.7482      0.7113      0.6651
 
 ============================================================================
